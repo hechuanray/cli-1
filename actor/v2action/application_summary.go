@@ -5,6 +5,7 @@ import "code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 type ApplicationSummary struct {
 	Application
 	Stack            Stack
+	IsolationSegment string
 	RunningInstances []ApplicationInstanceWithStats
 	Routes           []Route
 }
@@ -25,6 +26,10 @@ func (actor Actor) GetApplicationSummaryByNameAndSpace(name string, spaceGUID st
 	if app.State == ccv2.ApplicationStarted {
 		var instances []ApplicationInstanceWithStats
 		instances, warnings, err = actor.GetApplicationInstancesWithStatsByApplication(app.GUID)
+
+		if len(instances) > 0 {
+			applicationSummary.IsolationSegment = instances[0].IsolationSegment
+		}
 		allWarnings = append(allWarnings, warnings...)
 
 		switch err.(type) {

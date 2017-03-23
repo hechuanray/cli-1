@@ -186,6 +186,7 @@ var _ = Describe("App Command", func() {
 							DetectedBuildpack: "some-buildpack",
 							State:             "STARTED",
 						},
+						IsolationSegment: "some-isolation-segment",
 						Stack: v2action.Stack{
 							Name: "potatos",
 						},
@@ -216,6 +217,7 @@ var _ = Describe("App Command", func() {
 						Expect(testUI.Out).To(Say("Name:\\s+some-app"))
 						Expect(testUI.Out).To(Say("Requested state:\\s+started"))
 						Expect(testUI.Out).To(Say("Instances:\\s+0\\/3"))
+						Expect(testUI.Out).To(Say("Isolation segment:\\s+some-isolation-segment"))
 						Expect(testUI.Out).To(Say("Usage:\\s+128M x 3 instances"))
 						Expect(testUI.Out).To(Say("Routes:\\s+banana.fruit.com/hi, foobar.com:13"))
 						Expect(testUI.Out).To(Say("Last uploaded:\\s+\\w{3} [0-3]\\d \\w{3} [0-2]\\d:[0-5]\\d:[0-5]\\d \\w+ \\d{4}"))

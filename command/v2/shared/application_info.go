@@ -32,6 +32,7 @@ func DisplayAppSummary(ui command.UI, appSummary v2action.ApplicationSummary, di
 		{ui.TranslateText("Name:"), appSummary.Name},
 		{ui.TranslateText("Requested state:"), strings.ToLower(string(appSummary.State))},
 		{ui.TranslateText("Instances:"), instances},
+		{ui.TranslateText("Isolation segment:"), appSummary.IsolationSegment},
 		{ui.TranslateText("Usage:"), usage},
 		{ui.TranslateText("Routes:"), routes},
 		{ui.TranslateText("Last uploaded:"), ui.UserFriendlyDate(appSummary.PackageUpdatedAt)},
