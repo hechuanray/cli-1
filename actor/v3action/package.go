@@ -52,7 +52,9 @@ func (actor Actor) CreateAndUploadPackageByApplicationNameAndSpace(appName strin
 		return Package{}, allWarnings, err
 	}
 
-	for pkg.State != ccv3.PackageStateReady {
+	for pkg.State != ccv3.PackageStateReady &&
+		pkg.State != ccv3.PackageStateFailed &&
+		pkg.State != ccv3.PackageStateExpired {
 		time.Sleep(actor.Config.PollingInterval())
 		pkg, warnings, err = actor.CloudControllerClient.GetPackage(pkg.GUID)
 		allWarnings = append(allWarnings, warnings...)

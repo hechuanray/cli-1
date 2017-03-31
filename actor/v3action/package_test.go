@@ -13,6 +13,7 @@ import (
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv3"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -121,6 +122,7 @@ var _ = Describe("Package Actions", func() {
 									nil,
 								)
 							})
+
 							It("correctly constructs the zip", func() {
 								fakeCloudControllerClient.UploadPackageStub = func(pkg ccv3.Package, zipFilePart string) (ccv3.Package, ccv3.Warnings, error) {
 									filestats := map[string]int64{}
@@ -187,26 +189,32 @@ var _ = Describe("Package Actions", func() {
 								Expect(fakeCloudControllerClient.GetPackageArgsForCall(0)).To(Equal("some-pkg-guid"))
 							})
 
-							It("correctly polls until package state is READY", func() {
-								fakeCloudControllerClient.GetPackageReturns(
-									ccv3.Package{GUID: "some-pkg-guid", State: ccv3.PackageStateAwaitingUpload},
-									ccv3.Warnings{"some-get-pkg-warning"},
-									nil,
-								)
-								fakeCloudControllerClient.GetPackageReturnsOnCall(
-									2,
-									ccv3.Package{State: ccv3.PackageStateReady},
-									ccv3.Warnings{"some-get-pkg-warning"},
-									nil,
-								)
+							DescribeTable("polls until terminal state is reached",
+								func(finalState ccv3.PackageState) {
+									fakeCloudControllerClient.GetPackageReturns(
+										ccv3.Package{GUID: "some-pkg-guid", State: ccv3.PackageStateAwaitingUpload},
+										ccv3.Warnings{"some-get-pkg-warning"},
+										nil,
+									)
+									fakeCloudControllerClient.GetPackageReturnsOnCall(
+										2,
+										ccv3.Package{State: finalState},
+										ccv3.Warnings{"some-get-pkg-warning"},
+										nil,
+									)
 
-								_, warnings, err := actor.CreateAndUploadPackageByApplicationNameAndSpace("some-app-name", "some-space-guid", bitsPath)
-								Expect(err).ToNot(HaveOccurred())
-								Expect(warnings).To(ConsistOf("some-app-warning", "some-pkg-warning", "some-upload-pkg-warning", "some-get-pkg-warning", "some-get-pkg-warning", "some-get-pkg-warning"))
+									_, warnings, err := actor.CreateAndUploadPackageByApplicationNameAndSpace("some-app-name", "some-space-guid", bitsPath)
+									Expect(err).ToNot(HaveOccurred())
+									Expect(warnings).To(ConsistOf("some-app-warning", "some-pkg-warning", "some-upload-pkg-warning", "some-get-pkg-warning", "some-get-pkg-warning", "some-get-pkg-warning"))
 
-								Expect(fakeCloudControllerClient.GetPackageCallCount()).To(Equal(3))
-								Expect(fakeConfig.PollingIntervalCallCount()).To(Equal(3))
-							})
+									Expect(fakeCloudControllerClient.GetPackageCallCount()).To(Equal(3))
+									Expect(fakeConfig.PollingIntervalCallCount()).To(Equal(3))
+								},
+
+								Entry("READY", ccv3.PackageStateReady),
+								Entry("FAILED", ccv3.PackageStateFailed),
+								Entry("EXPIRED", ccv3.PackageStateExpired),
+							)
 						})
 
 						Context("when the polling errors", func() {
