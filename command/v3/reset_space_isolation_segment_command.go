@@ -14,7 +14,7 @@ import (
 
 type ResetSpaceIsolationSegmentActor interface {
 	CloudControllerAPIVersion() string
-	AssignIsolationSegmentToSpaceByNameAndSpace(isolationSegmentName string, spaceGUID string) (v3action.Warnings, error)
+	ResetSpaceIsolationSegment(spaceGUID string) (string, v3action.Warnings, error)
 }
 
 //go:generate counterfeiter . ResetSpaceIsolationSegmentActorV2
@@ -77,21 +77,29 @@ func (cmd ResetSpaceIsolationSegmentCommand) Execute(args []string) error {
 		"CurrentUser": user.Name,
 	})
 
-	_, v2Warnings, err := cmd.ActorV2.GetSpaceByOrganizationAndName(cmd.Config.TargetedOrganization().GUID, cmd.RequiredArgs.SpaceName)
+	space, v2Warnings, err := cmd.ActorV2.GetSpaceByOrganizationAndName(cmd.Config.TargetedOrganization().GUID, cmd.RequiredArgs.SpaceName)
 	cmd.UI.DisplayWarnings(v2Warnings)
 	if err != nil {
 		return sharedV2.HandleError(err)
 	}
 
-	// warnings, err := cmd.Actor.AssignIsolationSegmentToSpaceByNameAndSpace(cmd.RequiredArgs.IsolationSegmentName, space.GUID)
-	// cmd.UI.DisplayWarnings(warnings)
-	// if err != nil {
-	// 	return shared.HandleError(err)
-	// }
+	newIsolationSegment, warnings, err := cmd.Actor.ResetSpaceIsolationSegment(space.GUID)
+	cmd.UI.DisplayWarnings(warnings)
+	if err != nil {
+		return shared.HandleError(err)
+	}
 
-	// cmd.UI.DisplayOK()
-	// cmd.UI.DisplayNewline()
-	// cmd.UI.DisplayText("In order to move running applications to this isolation segment, they must be restarted.")
+	cmd.UI.DisplayOK()
+	cmd.UI.DisplayNewline()
+
+	if newIsolationSegment == "" {
+		cmd.UI.DisplayText("Applications in this space will be placed in the platform default isolation segment.")
+	} else {
+		cmd.UI.DisplayText("Applications in this space will be placed in isolation segment {{.orgIsolationSegment}}.", map[string]interface{}{
+			"orgIsolationSegment": newIsolationSegment,
+		})
+	}
+	cmd.UI.DisplayText("Running applications need a restart to be moved there.")
 
 	return nil
 }
