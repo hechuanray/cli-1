@@ -14,7 +14,7 @@ import (
 
 type ResetSpaceIsolationSegmentActor interface {
 	CloudControllerAPIVersion() string
-	ResetSpaceIsolationSegment(spaceGUID string) (string, v3action.Warnings, error)
+	ResetSpaceIsolationSegment(orgGUID string, spaceGUID string) (string, v3action.Warnings, error)
 }
 
 //go:generate counterfeiter . ResetSpaceIsolationSegmentActorV2
@@ -40,17 +40,17 @@ func (cmd *ResetSpaceIsolationSegmentCommand) Setup(config command.Config, ui co
 	cmd.Config = config
 	cmd.SharedActor = sharedaction.NewActor()
 
-	_, err := shared.NewClients(config, ui, true)
+	ccClient, err := shared.NewClients(config, ui, true)
 	if err != nil {
 		return err
 	}
-	// cmd.Actor = v3action.NewActor(client)
+	cmd.Actor = v3action.NewActor(ccClient)
 
-	_, _, err = sharedV2.NewClients(config, ui, true)
+	ccClientV2, uaaClientV2, err := sharedV2.NewClients(config, ui, true)
 	if err != nil {
 		return err
 	}
-	// cmd.ActorV2 = v2action.NewActor(ccClientV2, uaaClientV2)
+	cmd.ActorV2 = v2action.NewActor(ccClientV2, uaaClientV2)
 
 	return nil
 }
@@ -83,7 +83,7 @@ func (cmd ResetSpaceIsolationSegmentCommand) Execute(args []string) error {
 		return sharedV2.HandleError(err)
 	}
 
-	newIsolationSegment, warnings, err := cmd.Actor.ResetSpaceIsolationSegment(space.GUID)
+	newIsolationSegmentName, warnings, err := cmd.Actor.ResetSpaceIsolationSegment(cmd.Config.TargetedOrganization().GUID, space.GUID)
 	cmd.UI.DisplayWarnings(warnings)
 	if err != nil {
 		return shared.HandleError(err)
@@ -92,11 +92,11 @@ func (cmd ResetSpaceIsolationSegmentCommand) Execute(args []string) error {
 	cmd.UI.DisplayOK()
 	cmd.UI.DisplayNewline()
 
-	if newIsolationSegment == "" {
+	if newIsolationSegmentName == "" {
 		cmd.UI.DisplayText("Applications in this space will be placed in the platform default isolation segment.")
 	} else {
 		cmd.UI.DisplayText("Applications in this space will be placed in isolation segment {{.orgIsolationSegment}}.", map[string]interface{}{
-			"orgIsolationSegment": newIsolationSegment,
+			"orgIsolationSegment": newIsolationSegmentName,
 		})
 	}
 	cmd.UI.DisplayText("Running applications need a restart to be moved there.")

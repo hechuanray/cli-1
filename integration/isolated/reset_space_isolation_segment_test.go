@@ -1,6 +1,8 @@
 package isolated
 
 import (
+	"fmt"
+
 	"code.cloudfoundry.org/cli/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -8,7 +10,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var _ = FDescribe("set-space-isolation-segment command", func() {
+var _ = Describe("reset-space-isolation-segment command", func() {
 	var organizationName string
 	var spaceName string
 
@@ -73,7 +75,7 @@ var _ = FDescribe("set-space-isolation-segment command", func() {
 		})
 	})
 
-	FContext("when the environment is set up correctly", func() {
+	Context("when the environment is set up correctly", func() {
 		var userName string
 
 		BeforeEach(func() {
@@ -83,7 +85,7 @@ var _ = FDescribe("set-space-isolation-segment command", func() {
 			helpers.TargetOrg(organizationName)
 		})
 
-		FContext("when the space does not exist", func() {
+		Context("when the space does not exist", func() {
 			It("fails with space not found message", func() {
 				session := helpers.CF("reset-space-isolation-segment", spaceName)
 				Eventually(session).Should(Say("Resetting isolation segment assignment of space %s in org %s as %s...", spaceName, organizationName, userName))
@@ -96,20 +98,51 @@ var _ = FDescribe("set-space-isolation-segment command", func() {
 		Context("when the space exists", func() {
 			BeforeEach(func() {
 				helpers.CreateSpace(spaceName)
-			})
-
-			Context("when there is a default org isolation segment", func() {
-				It("resets the space isolation segment to the default org isolation segment", func() {
-
-				})
+				isolationSegmentName := helpers.IsolationSegmentName()
+				Eventually(helpers.CF("create-isolation-segment", isolationSegmentName)).Should(Exit(0))
+				Eventually(helpers.CF("enable-org-isolation", organizationName, isolationSegmentName)).Should(Exit(0))
+				Eventually(helpers.CF("set-space-isolation-segment", spaceName, isolationSegmentName)).Should(Exit(0))
 			})
 
 			Context("when there is no default org isolation segment", func() {
 				It("resets the space isolation segment to the shared isolation segment", func() {
+					session := helpers.CF("reset-space-isolation-segment", spaceName)
+					Eventually(session).Should(Say("Resetting isolation segment assignment of space %s in org %s as %s...", spaceName, organizationName, userName))
 
+					Eventually(session).Should(Say("OK"))
+					Eventually(session).Should(Say("Applications in this space will be placed in the platform default isolation segment."))
+					Eventually(session).Should(Say("Running applications need a restart to be moved there."))
+					Eventually(session).Should(Exit(0))
 				})
 			})
 
+			Context("when there is a default org isolation segment", func() {
+				var orgGUID string
+				var orgIsolationSegmentName string
+				var orgIsolationSegmentGUID string
+
+				BeforeEach(func() {
+					orgIsolationSegmentName = helpers.IsolationSegmentName()
+					Eventually(helpers.CF("create-isolation-segment", orgIsolationSegmentName)).Should(Exit(0))
+					Eventually(helpers.CF("enable-org-isolation", organizationName, orgIsolationSegmentName)).Should(Exit(0))
+					orgIsolationSegmentGUID = helpers.GetIsolationSegmentGUID(orgIsolationSegmentName)
+					orgGUID = helpers.GetOrgGUID(organizationName)
+
+					Eventually(helpers.CF("curl", "-X", "PATCH",
+						fmt.Sprintf("/v3/organizations/%s/relationships/default_isolation_segment", orgGUID),
+						"-d", fmt.Sprintf(`{"data":{"guid":"%s"}`, orgIsolationSegmentGUID))).Should(Exit(0))
+				})
+
+				It("resets the space isolation segment to the default org isolation segment", func() {
+					session := helpers.CF("reset-space-isolation-segment", spaceName)
+					Eventually(session).Should(Say("Resetting isolation segment assignment of space %s in org %s as %s...", spaceName, organizationName, userName))
+
+					Eventually(session).Should(Say("OK"))
+					Eventually(session).Should(Say("Applications in this space will be placed in isolation segment %s.", orgIsolationSegmentName))
+					Eventually(session).Should(Say("Running applications need a restart to be moved there."))
+					Eventually(session).Should(Exit(0))
+				})
+			})
 		})
 	})
 })

@@ -18,9 +18,10 @@ type FakeResetSpaceIsolationSegmentActor struct {
 	cloudControllerAPIVersionReturnsOnCall map[int]struct {
 		result1 string
 	}
-	ResetSpaceIsolationSegmentStub        func(spaceGUID string) (string, v3action.Warnings, error)
+	ResetSpaceIsolationSegmentStub        func(orgGUID string, spaceGUID string) (string, v3action.Warnings, error)
 	resetSpaceIsolationSegmentMutex       sync.RWMutex
 	resetSpaceIsolationSegmentArgsForCall []struct {
+		orgGUID   string
 		spaceGUID string
 	}
 	resetSpaceIsolationSegmentReturns struct {
@@ -77,16 +78,17 @@ func (fake *FakeResetSpaceIsolationSegmentActor) CloudControllerAPIVersionReturn
 	}{result1}
 }
 
-func (fake *FakeResetSpaceIsolationSegmentActor) ResetSpaceIsolationSegment(spaceGUID string) (string, v3action.Warnings, error) {
+func (fake *FakeResetSpaceIsolationSegmentActor) ResetSpaceIsolationSegment(orgGUID string, spaceGUID string) (string, v3action.Warnings, error) {
 	fake.resetSpaceIsolationSegmentMutex.Lock()
 	ret, specificReturn := fake.resetSpaceIsolationSegmentReturnsOnCall[len(fake.resetSpaceIsolationSegmentArgsForCall)]
 	fake.resetSpaceIsolationSegmentArgsForCall = append(fake.resetSpaceIsolationSegmentArgsForCall, struct {
+		orgGUID   string
 		spaceGUID string
-	}{spaceGUID})
-	fake.recordInvocation("ResetSpaceIsolationSegment", []interface{}{spaceGUID})
+	}{orgGUID, spaceGUID})
+	fake.recordInvocation("ResetSpaceIsolationSegment", []interface{}{orgGUID, spaceGUID})
 	fake.resetSpaceIsolationSegmentMutex.Unlock()
 	if fake.ResetSpaceIsolationSegmentStub != nil {
-		return fake.ResetSpaceIsolationSegmentStub(spaceGUID)
+		return fake.ResetSpaceIsolationSegmentStub(orgGUID, spaceGUID)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -100,10 +102,10 @@ func (fake *FakeResetSpaceIsolationSegmentActor) ResetSpaceIsolationSegmentCallC
 	return len(fake.resetSpaceIsolationSegmentArgsForCall)
 }
 
-func (fake *FakeResetSpaceIsolationSegmentActor) ResetSpaceIsolationSegmentArgsForCall(i int) string {
+func (fake *FakeResetSpaceIsolationSegmentActor) ResetSpaceIsolationSegmentArgsForCall(i int) (string, string) {
 	fake.resetSpaceIsolationSegmentMutex.RLock()
 	defer fake.resetSpaceIsolationSegmentMutex.RUnlock()
-	return fake.resetSpaceIsolationSegmentArgsForCall[i].spaceGUID
+	return fake.resetSpaceIsolationSegmentArgsForCall[i].orgGUID, fake.resetSpaceIsolationSegmentArgsForCall[i].spaceGUID
 }
 
 func (fake *FakeResetSpaceIsolationSegmentActor) ResetSpaceIsolationSegmentReturns(result1 string, result2 v3action.Warnings, result3 error) {

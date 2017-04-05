@@ -110,7 +110,7 @@ var _ = Describe("reset-space-isolation-segment Command", func() {
 			})
 		})
 
-		FContext("when the space lookup is successful", func() {
+		Context("when the space lookup is successful", func() {
 			BeforeEach(func() {
 				fakeActorV2.GetSpaceByOrganizationAndNameReturns(v2action.Space{
 					Name: space,
@@ -139,14 +139,15 @@ var _ = Describe("reset-space-isolation-segment Command", func() {
 					Eventually(testUI.Out).Should(Say("Running applications need a restart to be moved there."))
 
 					Expect(fakeActor.ResetSpaceIsolationSegmentCallCount()).To(Equal(1))
-					spaceGUID := fakeActor.ResetSpaceIsolationSegmentArgsForCall(0)
+					orgGUID, spaceGUID := fakeActor.ResetSpaceIsolationSegmentArgsForCall(0)
+					Expect(orgGUID).To(Equal("some-org-guid"))
 					Expect(spaceGUID).To(Equal("some-space-guid"))
 				})
 			})
 
 			Context("when the reset changes the isolation segment to the org's default", func() {
 				BeforeEach(func() {
-					fakeActor.ResetSpaceIsolationSegmentReturns("some-org-iso-seg", v3action.Warnings{"warning-3", "warning-4"}, nil)
+					fakeActor.ResetSpaceIsolationSegmentReturns("some-org-iso-seg-name", v3action.Warnings{"warning-3", "warning-4"}, nil)
 				})
 
 				It("Displays the header and okay", func() {
@@ -161,11 +162,12 @@ var _ = Describe("reset-space-isolation-segment Command", func() {
 					Eventually(testUI.Err).Should(Say("warning-3"))
 					Eventually(testUI.Err).Should(Say("warning-4"))
 
-					Eventually(testUI.Out).Should(Say("Applications in this space will be placed in isolation segment some-org-iso-seg."))
+					Eventually(testUI.Out).Should(Say("Applications in this space will be placed in isolation segment some-org-iso-seg-name."))
 					Eventually(testUI.Out).Should(Say("Running applications need a restart to be moved there."))
 
 					Expect(fakeActor.ResetSpaceIsolationSegmentCallCount()).To(Equal(1))
-					spaceGUID := fakeActor.ResetSpaceIsolationSegmentArgsForCall(0)
+					orgGUID, spaceGUID := fakeActor.ResetSpaceIsolationSegmentArgsForCall(0)
+					Expect(orgGUID).To(Equal("some-org-guid"))
 					Expect(spaceGUID).To(Equal("some-space-guid"))
 				})
 			})
